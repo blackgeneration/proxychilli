@@ -3,9 +3,9 @@ A proxy scrapping tool
 
 ### Dependencies
 
--beautifulsoup4
--ipaddress
--selenium
+- beautifulsoup4
+- ipaddress
+- selenium
 
 ### How to install 
 
