@@ -20,7 +20,7 @@ python proxyreaper.py
 ### You can it in scripts
 
 ```
-from Proxyreaper import ProxyReaper
+from proxyreaper import ProxyReaper
 
 obj = ProxyReaper(10)
 action = obj.get_proxies()
