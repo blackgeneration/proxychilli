@@ -5,9 +5,7 @@ TODO
 """
 
 from selenium import webdriver
-from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException
-from selenium.common.exceptions import TimeoutException, ElementNotInteractableException, JavascriptException
-
+from selenium.common.exceptions import *
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.common.by import By
@@ -15,6 +13,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
 import sys
+import re
 import time
 import random
 import threading
@@ -26,11 +25,13 @@ from bs4 import BeautifulSoup as b4
 
 class ProxyReaper:
     
-    def __init__(self, proxy_count=None):
+    def __init__(self, proxy_count=None, headless=False):
         self.proxy_list = []
         self.chrome_options = webdriver.ChromeOptions()       
         chromedriver_path = self.get_chromedriver_path()
-        self.chrome_options.add_argument("--headless")
+        
+        if headless == True:
+            self.chrome_options.add_argument("--headless")
         self.browser = webdriver.Chrome(chromedriver_path, chrome_options=self.chrome_options)
         self.first_run = True
         self.page_count = 1
@@ -50,24 +51,37 @@ class ProxyReaper:
         return "./chromedrivers/"+chrome_driver
     
     def suck_proxies(self, html_doc):
-        print("[+] Sucking proxies....")
+        """
+        @summary - mines proxy data from given html code
+        @html_doc - the source to mine from
+        @returns - gets proxies and appends it to self.proxy_list 
+        """
+        
         f = b4(html_doc, 'html.parser')
         tds = f.find_all('td')
         count = 0
         
         while count < len(tds):
             try:
-                ip = ipaddress.ip_address(tds[count].string)               
+                print(ip = re.findall( r'[0-9]+(?:\.[0-9]+){3}', tds[count] ))
+                # ip = ipaddress.ip_address(tds[count])
+                
+                sys.exit()               
             except ValueError:
                 pass
             else:
                 valid_ip = "{0}:{1}".format(tds[count].string, tds[count+1].string)
                 self.proxy_list.append(valid_ip)
-            
+                
+        
             count += 1
                
      
     def gather_proxy(self, proxy_type="elite"):
+        """
+        @summary - gathers proxies fro gatherproxy.com website
+        @returns - nothing but proxies
+        """
         print("[+] [GetherProxy.com]Getting proxies....")
         
         if proxy_type == "elite":
@@ -75,16 +89,77 @@ class ProxyReaper:
         elif proxy_type == "transparent":
             self.browser.get("http://www.gatherproxy.com/proxylist/anonymity/?t=Transparent")
             
-
-        time.sleep(5)
-        try:       
-            output = self.browser.execute_script("return document.getElementsByTagName('table')[0].innerHTML")
-            self.suck_proxies(output)
+            
+        
+        try:
+            commands = """
+            show_full_list = document.getElementsByTagName('input')[0]
+            if (show_full_list.value == "Show Full List"){
+                show_full_list.click()
+            }    
+            """
+            self.browser.execute_script(commands)
+            time.sleep(2)
+        except JavascriptException:
+            return False
+        else:
+            maximum_page = int(self.browser.execute_script("return document.getElementsByClassName('inactive').length")) + 1
+            current_page = 1
+            while True:
+                
+                # Suck proxies from here
+                try:       
+                    ips_list = self.browser.execute_script("""
+                                                         
+                                                         ips_list = []
+                                                         tds = document.getElementsByTagName('td')
+                                                         function ValidateIPaddress(ipaddress) 
+                                                            {
+                                                            if (/^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/.test(ipaddress))
+                                                            {
+                                                                return true
+                                                            }
+                                                            
+                                                            return false
+                                                            }
+                                                        
+                                                        for (var i = 0; i < tds.length; i++){
+                                                            
+                                                            if (ValidateIPaddress(tds[i].innerText)){
+                                                                ips_list.push(tds[i].innerText+":"+tds[i+1].innerText)
+                                                            }
+                                                        }
+                                                        
+                                                        return ips_list
+                                                        
+                                                         """)
+                    
+                    self.proxy_list += ips_list 
+                    
+                    if self.proxy_count != None:                 
+                        if len(self.proxy_list) >= self.proxy_count:
+                            print("[+] Done!")
+                            break
+                except JavascriptException:
+                    print("[-142-] JS Error")
+                    break
+                
+                
+                if current_page == (maximum_page-1):
+                    break
+                else:
+                    try:
+                        current_page += 1
+                        commands = "return document.getElementsByClassName('inactive')[%d].click()" % current_page
+                        self.browser.execute_script(commands)
+                        time.sleep(2)
+                    except JavascriptException:
+                        break
+            
             if len(self.proxy_list) > 0:
-                print("[+] Done!")
                 return True
-        except:
-            return None
+            else:
+                return False
 
 
     def free_proxy_list(self):
@@ -105,15 +180,13 @@ class ProxyReaper:
         
     def get_proxies(self):
         gather_output = self.gather_proxy()
-        
-        if gather_output == None:
-            print("[-] [https://gatherproxy.com] FAILED")
-            free_output = self.free_proxy_list()
-
-            if free_output == None:
-                print("[-] [https://free-proxy-list.net] FAILED")
-            
         self.browser.quit()
+        # if (gather_output == True) or (len(self.proxy_list) > 0):
+        #     self.browser.quit()
+        # else:
+        #     free_output = self.free_proxy_list()
+        #     if (free_output == True) or (len(self.proxy_list) > 0):
+        #         self.browser.quit()
         
     def get_proxy_list(self):
         if self.proxy_count != None:
@@ -123,6 +196,6 @@ class ProxyReaper:
 
 
 if __name__ == '__main__':
-    d = ProxyReaper(10)
+    d = ProxyReaper()
     d.get_proxies()
     print(d.get_proxy_list())   
