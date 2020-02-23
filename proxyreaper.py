@@ -75,6 +75,34 @@ class ProxyReaper:
                 
         
             count += 1
+            
+    def suck_proxies2(self):
+        ips_list = self.browser.execute_script("""
+                                                         
+                                                         ips_list = []
+                                                         tds = document.getElementsByTagName('td')
+                                                         function ValidateIPaddress(ipaddress) 
+                                                            {
+                                                            if (/^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/.test(ipaddress))
+                                                            {
+                                                                return true
+                                                            }
+                                                            
+                                                            return false
+                                                            }
+                                                        
+                                                        for (var i = 0; i < tds.length; i++){
+                                                            
+                                                            if (ValidateIPaddress(tds[i].innerText)){
+                                                                ips_list.push(tds[i].innerText+":"+tds[i+1].innerText)
+                                                            }
+                                                        }
+                                                        
+                                                        return ips_list
+                                                        
+                                                         """)
+                    
+        self.proxy_list += ips_list
                
      
     def gather_proxy(self, proxy_type="elite"):
@@ -109,32 +137,7 @@ class ProxyReaper:
                 
                 # Suck proxies from here
                 try:       
-                    ips_list = self.browser.execute_script("""
-                                                         
-                                                         ips_list = []
-                                                         tds = document.getElementsByTagName('td')
-                                                         function ValidateIPaddress(ipaddress) 
-                                                            {
-                                                            if (/^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/.test(ipaddress))
-                                                            {
-                                                                return true
-                                                            }
-                                                            
-                                                            return false
-                                                            }
-                                                        
-                                                        for (var i = 0; i < tds.length; i++){
-                                                            
-                                                            if (ValidateIPaddress(tds[i].innerText)){
-                                                                ips_list.push(tds[i].innerText+":"+tds[i+1].innerText)
-                                                            }
-                                                        }
-                                                        
-                                                        return ips_list
-                                                        
-                                                         """)
-                    
-                    self.proxy_list += ips_list 
+                    self.suck_proxies2() 
                     
                     if self.proxy_count != None:                 
                         if len(self.proxy_list) >= self.proxy_count:
@@ -167,26 +170,57 @@ class ProxyReaper:
         try:
             self.browser.get("https://free-proxy-list.net")
             time.sleep(5)
-            output = self.browser.execute_script("return document.getElementsByTagName('table')[0].innerHTML")
-            self.suck_proxies(output)
+            
+            while True:
+                
+                self.suck_proxies2()
+                
+                # Check if the next button is disabled
+                next_disabled = self.browser.execute_script(
+                    """
+                    shhs = document.getElementById("proxylisttable_next").classList;
+                    return shhs.contains("disabled");    
+                    """
+                )
+                
+                if next_disabled == True:
+                    break
+                else:
+                    # Go to next table and suck em proxies 
+                    self.browser.execute_script(
+                    """
+                    document.getElementById("proxylisttable_next").click()    
+                    """
+                )
+                    time.sleep(1)
+                    
+                    
             
             if len(self.proxy_list) > 0:
-                print("[+] Done!")
+            
                 return True
         except:
-            return None
+            return False
     
         
         
     def get_proxies(self):
-        gather_output = self.gather_proxy()
+        gproxy_status = self.gather_proxy()
+        
+        if (gproxy_status):
+            print("[*] [gatherproxy.com] Operation complete...")
+        else:
+            print("[-] [gatherproxy.com] Operation failes. Going to next site...")
+            fproxy_status = self.free_proxy_list
+            
+            if fproxy_status:
+                print("[*] [free-proxy-list.net] Operation complete...")
+            else:
+                print("[*] [free-proxy-list.net] Operation failed. Exiting....")
+                
+        
         self.browser.quit()
-        # if (gather_output == True) or (len(self.proxy_list) > 0):
-        #     self.browser.quit()
-        # else:
-        #     free_output = self.free_proxy_list()
-        #     if (free_output == True) or (len(self.proxy_list) > 0):
-        #         self.browser.quit()
+            
         
     def get_proxy_list(self):
         if self.proxy_count != None:
@@ -196,6 +230,6 @@ class ProxyReaper:
 
 
 if __name__ == '__main__':
-    d = ProxyReaper()
+    d = ProxyReaper(headless=True)
     d.get_proxies()
     print(d.get_proxy_list())   
