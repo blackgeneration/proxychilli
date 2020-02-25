@@ -23,7 +23,7 @@ from bs4 import BeautifulSoup as b4
 
 
 
-class ProxyReaper:
+class ProxyChilli:
     
     def __init__(self, proxy_count=None, headless=False):
         self.proxy_list = []
@@ -50,31 +50,31 @@ class ProxyReaper:
             
         return "./chromedrivers/"+chrome_driver
     
-    def suck_proxies(self, html_doc):
-        """
-        @summary - mines proxy data from given html code
-        @html_doc - the source to mine from
-        @returns - gets proxies and appends it to self.proxy_list 
-        """
+    # def suck_proxies(self, html_doc):
+    #     """
+    #     @summary - mines proxy data from given html code
+    #     @html_doc - the source to mine from
+    #     @returns - gets proxies and appends it to self.proxy_list 
+    #     """
         
-        f = b4(html_doc, 'html.parser')
-        tds = f.find_all('td')
-        count = 0
+    #     f = b4(html_doc, 'html.parser')
+    #     tds = f.find_all('td')
+    #     count = 0
         
-        while count < len(tds):
-            try:
-                print(ip = re.findall( r'[0-9]+(?:\.[0-9]+){3}', tds[count] ))
-                # ip = ipaddress.ip_address(tds[count])
+    #     while count < len(tds):
+    #         try:
+    #             print(ip = re.findall( r'[0-9]+(?:\.[0-9]+){3}', tds[count] ))
+    #             # ip = ipaddress.ip_address(tds[count])
                 
-                sys.exit()               
-            except ValueError:
-                pass
-            else:
-                valid_ip = "{0}:{1}".format(tds[count].string, tds[count+1].string)
-                self.proxy_list.append(valid_ip)
+    #             sys.exit()               
+    #         except ValueError:
+    #             pass
+    #         else:
+    #             valid_ip = "{0}:{1}".format(tds[count].string, tds[count+1].string)
+    #             self.proxy_list.append(valid_ip)
                 
         
-            count += 1
+    #         count += 1
             
     def suck_proxies2(self):
         ips_list = self.browser.execute_script("""
@@ -230,6 +230,6 @@ class ProxyReaper:
 
 
 if __name__ == '__main__':
-    d = ProxyReaper(headless=True)
+    d = ProxyChilli(10, headless=True)
     d.get_proxies()
     print(d.get_proxy_list())   
