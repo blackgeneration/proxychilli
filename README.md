@@ -1,5 +1,5 @@
 
-![Grim Reaper No Background](https://github.com/blackgeneration/Proxychilli/blob/master/0942fa87835fdb2cc3c6c2db9300750c-removebg-preview.png)
+![Grim Reaper No Background](https://github.com/blackgeneration/Proxychilli/blob/master/images/proxychilli.png)
 
 # Proxychilli v1.15
 A proxy scrapping tool
